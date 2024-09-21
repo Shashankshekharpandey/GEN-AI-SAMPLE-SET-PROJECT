@@ -1,0 +1,64 @@
+ Documentation of Approach
+
+This project builds an interactive web application using Streamlit, integrating LangChain's document processing capabilities, a Conversational Retrieval Chain, and Large Language Models (LLMs) to allow users to chat with uploaded documents (PDFs in this case). The key focus is enabling the user to query the document, and the system provides answers based on the document's content, supported by retrieval-based chat functionality.
+
+ 1. Package Imports and Setup
+We start by importing essential packages:
+
+os: To handle file paths and directory structure.
+dotenv: To load environment variables (useful for managing API keys or configuration values without hardcoding).
+streamlit: To build an interactive web application for uploading files and interacting with the chat.
+UnstructuredPDFLoader: Part of langchain_community for extracting text from PDFs.
+CharacterTextSplitter: Used for splitting the document's text into chunks to facilitate embedding and search.
+FAISS: A fast vector search system to manage and retrieve document chunks.
+HuggingFaceEmbeddings: Converts text chunks into embeddings (numerical vectors) for efficient searching.
+ChatGroq: An LLM interface from LangChain integrated with the model llama-3.1-70b.
+ConversationBufferMemory: Memory management to store conversation history for more contextually relevant responses.
+ConversationalRetrievalChain: Chains together language models with document retrieval for document-querying capabilities.
+
+ 2. Loading Environment Variables
+The .env file is loaded using load_dotenv(). This typically stores sensitive information such as API keys or model configurations to keep them secure and separate from the codebase.
+
+ 3. Document Loading and Preprocessing
+The function load_document() reads a PDF using UnstructuredPDFLoader. It extracts the document's raw content into a format that can be used for text manipulation and embedding.
+
+ 4. Vectorstore Setup
+In setup_vectorstore(documents), the loaded document is split into smaller, manageable chunks using the CharacterTextSplitter. This step is crucial for two reasons:
+Efficient document chunking: Since the model can handle a limited context window, breaking the document into chunks of 1000 characters with 200 characters of overlap ensures enough context for each query.
+Vector Representation: Each chunk is embedded using the HuggingFaceEmbeddings, and then stored in FAISS, allowing quick similarity search when the user queries the document.
+
+ 5. Conversational Retrieval Chain Setup
+The core logic of document querying is encapsulated in the function create_chain(vectorstore). Here:
+ChatGroq instantiates a language model (llama-3.1-70b-versatile) with a zero temperature setting (deterministic outputs).
+The FAISS vector store is converted into a retriever for querying document chunks.
+ConversationBufferMemory stores chat history, enabling the model to understand ongoing conversations better.
+The ConversationalRetrievalChain combines the LLM, memory, and retriever, allowing the user to ask questions about the document.
+
+ 6. Streamlit Application UI
+The app is initialized using st.set_page_config(), defining the title and layout of the web interface.
+
+ 7. File Upload and Processing
+The PDF file is uploaded via st.file_uploader(). Once uploaded, the file is written to the local directory.
+If the vectorstore is not already in the session state, the document is processed, chunked, and stored in the FAISS vectorstore.
+Similarly, if a conversation chain hasn't been initialized, it is set up once the vectorstore is ready.
+
+ 8. Chat Interface
+The chat interface (st.chat_message) allows users to interact by typing questions. The assistant (LLM) responds based on the document content.
+For each user input, the conversation chain retrieves relevant document sections and provides contextually relevant answers. Both the user query and the model response are appended to the chat history and rendered on the screen.
+
+- Design Decisions
+Embedding Choice: HuggingFace embeddings were chosen to handle diverse document types. This allows for richer and more context-aware document embeddings compared to simpler methods like TF-IDF or BERT.
+Document Chunking: Instead of treating the document as a whole, chunking ensures that even large documents can be efficiently queried without memory issues, making the retrieval faster.
+FAISS for Retrieval: FAISS is known for its efficiency in handling large vector stores, making it an ideal choice for large document embeddings.
+
+- Challenges Faced
+1. Handling Large Documents: Large PDFs can overwhelm the memory, so I split the document into manageable chunks with overlaps to ensure that the context is preserved across the sections.
+2. Retrieval Latency: FAISS was chosen to reduce query time and provide fast, accurate chunk retrieval.
+3. LLM Integration: Ensuring that the LLM accurately responds based on retrieved chunks required effective chaining of the language model with the retriever and memory buffer.
+
+- Solutions
+Efficient Chunking: The CharacterTextSplitter uses overlapping chunks to maintain context between document parts. This solution ensures that the model doesn’t lose important context when answering user queries.
+Caching with Streamlit Session State: Using Streamlit's session state, the vectorstore and conversation chain are cached to avoid reloading or re-processing the same documents, which could be computationally expensive.
+Interactive UI: Streamlit provides a lightweight and simple way to build an interactive interface, which was crucial for fast prototyping and deployment.
+
+This approach effectively enables querying large documents using advanced language models with a conversational interface, making the document more accessible to users who need quick, context-aware answers.
